@@ -15,10 +15,11 @@ Using tiny data
     python convert.py --weights ./data/yolov3-tiny.weights --output ./checkpoints/yolov3-tiny.tf --tiny
     
     scp data/card.names mbikyaw@popiah:~/pwork/yolov3-tf2/data/
+   
 
 Training
 
-    python train.py --batch_size 2 --classes data/card.names --dataset data/train.record --val_dataset data/val.record --epochs 25 --mode eager_tf --transfer fine_tune --weights ./checkpoints/yolov3-tiny.tf --tiny
+    python train.py --batch_size 1 --epochs 25 --transfer fine_tune --mode eager_tf --classes data/card.names --dataset data/train.record --val_dataset data/val.record --weights ./checkpoints/yolov3-tiny.tf --tiny
 
     python train.py --batch_size 1 --classes data/card.names --dataset data/train.record --val_dataset data/val.record --epochs 10 --mode eager_tf --transfer darknet
 
@@ -27,7 +28,7 @@ Training
 Copy data
 
     scp -r ../cardcon/data/scaled/* data/scaled/
-    scp -r ../cardcon/data/scaled mbikyaw@popiah:~/pwork/yolov3-tf2/data/scaled
+    rsync -avh ../cardcon/data/scaled mbikyaw@popiah:~/pwork/yolov3-tf2/data/scaled
 
 With tiny of 25 epoch training
 
@@ -39,12 +40,13 @@ With tiny of 25 epoch training
 
 All prediction
        
-    python predict.py --classes data/card.names --weights ./checkpoints/yolov3_train_26.tf --tiny 
+    python predict.py --classes data/card.names --weights ./checkpoints/yolov3_bs2_dn_e500.tf --tiny 
     python predict.py --classes data/card.names --weights ./checkpoints/yolov3_train_100.tf --tiny --save
 
 Copy model train 99
 
-    scp mbikyaw@popiah:~/pwork/yolov3-tf2/checkpoints/yolov3_train_26* checkpoints/
+    scp mbikyaw@popiah:~/pwork/yolov3-tf2/checkpoints/yolov3_train_25* checkpoints/
+    python chchk.py -i yolov3_train_25 -o bs1_ft_e25
 
 With normal
     

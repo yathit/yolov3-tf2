@@ -119,6 +119,7 @@ def main(_argv):
         # Non eager graph mode is recommended for real training
         avg_loss = tf.keras.metrics.Mean('loss', dtype=tf.float32)
         avg_val_loss = tf.keras.metrics.Mean('val_loss', dtype=tf.float32)
+        best_val_loss = 0
 
         for epoch in range(1, FLAGS.epochs + 1):
             for batch, (images, labels) in enumerate(train_dataset):
@@ -147,20 +148,25 @@ def main(_argv):
                     pred_loss.append(loss_fn(label, output))
                 total_loss = tf.reduce_sum(pred_loss) + regularization_loss
 
-                logging.info("{}_val_{}, {}, {}".format(
+                logging.debug("{}_val_{}, {}, {}".format(
                     epoch, batch, total_loss.numpy(),
                     list(map(lambda x: np.sum(x.numpy()), pred_loss))))
                 avg_val_loss.update_state(total_loss)
 
+            val_lost = avg_val_loss.result().numpy()
             logging.info("{}, train: {}, val: {}".format(
                 epoch,
                 avg_loss.result().numpy(),
-                avg_val_loss.result().numpy()))
+                val_lost))
 
             avg_loss.reset_states()
             avg_val_loss.reset_states()
             model.save_weights(
                 'checkpoints/yolov3_train_{}.tf'.format(epoch))
+            if best_val_loss == 0 or best_val_loss > val_lost:
+                best_val_loss = val_lost
+                logging.info("saving best val loss.")
+                model.save_weights('checkpoints/best.tf')
     else:
         model.compile(optimizer=optimizer, loss=loss,
                       run_eagerly=(FLAGS.mode == 'eager_fit'))
