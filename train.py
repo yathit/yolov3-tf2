@@ -136,9 +136,9 @@ def main(_argv):
                 optimizer.apply_gradients(
                     zip(grads, model.trainable_variables))
 
-                logging.info("{}_train_{}, {}, {}".format(
-                    epoch, batch, total_loss.numpy(),
-                    list(map(lambda x: np.sum(x.numpy()), pred_loss))))
+                # logging.info("{}_train_{}, {}, {}".format(
+                #     epoch, batch, total_loss.numpy(),
+                #     list(map(lambda x: np.sum(x.numpy()), pred_loss))))
                 avg_loss.update_state(total_loss)
 
             for batch, (images, labels) in enumerate(val_dataset):

@@ -16,6 +16,7 @@ flags.DEFINE_string('weights', './checkpoints/yolov3.tf',
 flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
 flags.DEFINE_integer('size', 416, 'resize images to')
 flags.DEFINE_boolean('save', False, 'save output file')
+flags.DEFINE_boolean('all', False, 'run all data')
 flags.DEFINE_string('image', './data/girl.png', 'path to input image')
 flags.DEFINE_string('output', './output.jpg', 'path to output image')
 flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
@@ -43,6 +44,11 @@ def main(_argv):
 
     files = os.listdir('data/scaled')
     for fn in files:
+        lc = fn[len(fn) - 5]
+        test_data = lc == '0'
+
+        if not flags.FLAGS.all and not test_data:
+            continue
 
         img = tf.image.decode_image(open('data/scaled/' + fn, 'rb').read(), channels=3)
         img = tf.expand_dims(img, 0)
@@ -65,8 +71,6 @@ def main(_argv):
             img = cv2.imread('data/scaled/' + fn)
             img = draw_outputs(img, (boxes, scores, classes, nums), class_names)
             ofn = 'data/predict/' + fn
-            lc = fn[len(fn) - 5]
-            test_data = lc == '0'
             if FLAGS.save or test_data:
                 cv2.imwrite(ofn, img)
                 logging.info('output saved to: {}'.format(ofn))

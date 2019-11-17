@@ -201,7 +201,7 @@ def yolo_nms(outputs, anchors, masks, classes):
 
 def YoloV3(size=None, channels=3, anchors=yolo_anchors,
            masks=yolo_anchor_masks, classes=80, training=False):
-    x = inputs = Input([1080, 1440, channels])
+    x = inputs = Input([size, size, channels])
 
     x_36, x_61, x = Darknet(name='yolo_darknet')(x)
 
@@ -232,7 +232,7 @@ def YoloV3(size=None, channels=3, anchors=yolo_anchors,
 
 def YoloV3Tiny(size=None, channels=3, anchors=yolo_tiny_anchors,
                masks=yolo_tiny_anchor_masks, classes=80, training=False):
-    x = inputs = Input([1080, 1440, channels])
+    x = inputs = Input([size, size, channels])
 
     x_8, x = DarknetTiny(name='yolo_darknet')(x)
 
