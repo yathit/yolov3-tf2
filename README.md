@@ -16,12 +16,11 @@ Using tiny data
     
     scp data/card.names mbikyaw@popiah:~/pwork/yolov3-tf2/data/
    
-
 Training
 
-    python train.py --batch_size 16 --epochs 5 --transfer fine_tune --mode eager_tf --classes data/card.names --dataset data/train.record --val_dataset data/val.record --weights ./checkpoints/yolov3-tiny.tf --tiny
+    python train.py --batch_size 2 --epochs 55 --transfer darknet --mode eager_tf --classes data/card.names --dataset data/train.record --val_dataset data/val.record --weights ./checkpoints/yolov3-tiny.tf --tiny
 
-    python train.py --transfer darknet --batch_size 2 --epochs 500 --mode eager_tf  --classes data/card.names --dataset data/train.record --val_dataset data/val.record 
+    python train.py --batch_size 2 --epochs 500 --transfer darknet --mode eager_tf  --classes data/card.names --dataset data/train.record --val_dataset data/val.record 
 
 ## Prediction
 
@@ -40,13 +39,13 @@ With tiny of 25 epoch training
 
 All prediction
        
-    python predict.py --classes data/card.names --weights ./checkpoints/d3_tiny_bs2_ft_e25.tf --tiny 
+    python predict.py --classes data/card.names --weights ./checkpoints/d3_tiny_bs2_dn_e25.tf --tiny 
     python predict.py --classes data/card.names --weights ./checkpoints/yolov3_train_100.tf --tiny --save
 
 Copy model train 99
 
     scp mbikyaw@popiah:~/pwork/yolov3-tf2/checkpoints/best* checkpoints/
-    python chchk.py -i best -o d3_tiny_bs2_ft_e25
+    python chchk.py -i best -o d3_tiny_bs2_dn_e25
 
 With normal
     
