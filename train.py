@@ -44,7 +44,8 @@ flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
 def main(_argv):
     physical_devices = tf.config.experimental.list_physical_devices('GPU')
     if len(physical_devices) > 0:
-        tf.config.experimental.set_memory_growth(physical_devices[0], True)
+        for dev in physical_devices:
+            tf.config.experimental.set_memory_growth(dev, True)
 
     if FLAGS.tiny:
         model = YoloV3Tiny(FLAGS.size, training=True,
@@ -148,9 +149,9 @@ def main(_argv):
                     pred_loss.append(loss_fn(label, output))
                 total_loss = tf.reduce_sum(pred_loss) + regularization_loss
 
-                logging.debug("{}_val_{}, {}, {}".format(
-                    epoch, batch, total_loss.numpy(),
-                    list(map(lambda x: np.sum(x.numpy()), pred_loss))))
+                # logging.info("{}_val_{}, {}, {}".format(
+                #     epoch, batch, total_loss.numpy(),
+                #     list(map(lambda x: np.sum(x.numpy()), pred_loss))))
                 avg_val_loss.update_state(total_loss)
 
             val_lost = avg_val_loss.result().numpy()

@@ -19,7 +19,7 @@ Using tiny data
 
 Training
 
-    python train.py --batch_size 1 --epochs 25 --transfer fine_tune --mode eager_tf --classes data/card.names --dataset data/train.record --val_dataset data/val.record --weights ./checkpoints/yolov3-tiny.tf --tiny
+    python train.py --batch_size 1 --epochs 50 --transfer darknet --mode eager_tf --classes data/card.names --dataset data/train.record --val_dataset data/val.record --weights ./checkpoints/yolov3-tiny.tf --tiny
 
     python train.py --batch_size 1 --classes data/card.names --dataset data/train.record --val_dataset data/val.record --epochs 10 --mode eager_tf --transfer darknet
 
