@@ -2,6 +2,51 @@
 
 This repo provides a clean implementation of YoloV3 in TensorFlow 2.0 using all the best practices.
 
+## Training
+
+Copy data
+
+    cp ../cardcon/data/*.record data/
+    scp data/*.record mbikyaw@popiah:~/pwork/yolov3-tf2/data/
+
+Using tiny data 
+
+    wget https://pjreddie.com/media/files/yolov3-tiny.weights -O data/yolov3-tiny.weights
+    python convert.py --weights ./data/yolov3-tiny.weights --output ./checkpoints/yolov3-tiny.tf --tiny
+    
+    scp data/card.names mbikyaw@popiah:~/pwork/yolov3-tf2/data/
+
+Training
+
+    python train.py --batch_size 1 --classes data/card.names --dataset data/train.record --val_dataset data/val.record --epochs 25 --mode eager_tf --transfer darknet --weights ./checkpoints/yolov3-tiny.tf --tiny
+
+    python train.py --batch_size 1 --classes data/card.names --dataset data/train.record --val_dataset data/val.record --epochs 10 --mode eager_tf --transfer darknet
+
+## Prediction
+
+Copy data
+
+    scp -r ../cardcon/data/scaled data/scaled
+    scp -r ../cardcon/data/scaled mbikyaw@popiah:~/pwork/yolov3-tf2/data/scaled
+
+With tiny of 25 epoch training
+
+    python detect.py --classes data/card.names --weights ./checkpoints/yolov3_train_25.tf --tiny --image ./data/scaled/1558425934772.jpg
+    python detect.py --classes data/card.names --weights ./checkpoints/yolov3_train_25.tf --tiny --image ./data/scaled/1568246607369.jpg
+    python detect.py --classes data/card.names --weights ./checkpoints/yolov3_train_25.tf --tiny --image ./data/scaled/1563584462378.jpg
+
+    python detect.py --classes data/card.names --weights ./checkpoints/yolov3_train_5.tf --tiny --image ./data/scaled/1563584462378.jpg
+
+
+With normal
+    
+    python detect.py --weights ./checkpoints/yolov3.tf --image ./data/scaled/1558425934772.jpg
+    python detect.py --weights ./checkpoints/yolov3.tf --image ./data/scaled/1568246607369.jpg
+    
+Copy output back   
+
+    scp  mbikyaw@popiah:~/pwork/yolov3-tf2/output.jpg ./
+
 ## Key Features
 
 - [x] TensorFlow 2.0
