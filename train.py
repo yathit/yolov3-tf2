@@ -163,7 +163,7 @@ def main(_argv):
             avg_loss.reset_states()
             avg_val_loss.reset_states()
             model.save_weights(
-                'checkpoints/yolov3_train_{}.tf'.format(epoch))
+                'checkpoints/yolov3_train_last.tf')
             if best_val_loss == 0 or best_val_loss > val_lost:
                 best_val_loss = val_lost
                 logging.info("saving best val loss.")
