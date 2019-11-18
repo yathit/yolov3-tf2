@@ -145,13 +145,13 @@ def main(_argv):
     optimizer = tf.keras.optimizers.Adam(lr=FLAGS.learning_rate)
     loss = [YoloLoss(anchors[mask], classes=FLAGS.num_classes)
             for mask in anchor_masks]
+    best_val_loss = 0
 
     if FLAGS.mode == 'eager_tf':
         # Eager mode is great for debugging
         # Non eager graph mode is recommended for real training
         avg_loss = tf.keras.metrics.Mean('loss', dtype=tf.float32)
         avg_val_loss = tf.keras.metrics.Mean('val_loss', dtype=tf.float32)
-        best_val_loss = 0
 
         for epoch in range(1, FLAGS.epochs + 1):
             for batch, (images, labels) in enumerate(train_dataset):
@@ -216,6 +216,14 @@ def main(_argv):
                             validation_data=val_dataset)
 
     print("Best weights are saved as %s" % best_tf_name)
+    tiny = 'tiny_' if FLAGS.tiny else ''
+    rt = os.path.getsize(FLAGS.dataset) / 1000000
+    mn = "%s_r%d%sm%s_bs%d_s%s_e%d_val%d.h5" % \
+         (tf_name, rt, tiny, FLAGS.transfer, FLAGS.batch_size, FLAGS.size, FLAGS.epochs, best_val_loss)
+    mfn = "data/model/%s.h5" % mn
+
+    model.save(mfn)
+    print("Model file saved to: %s" % mfn)
 
 
 if __name__ == '__main__':
