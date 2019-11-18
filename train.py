@@ -2,7 +2,7 @@ from absl import app, flags, logging
 from absl.flags import FLAGS
 import tensorflow as tf
 import numpy as np
-import cv2
+import os
 from tensorflow.keras.callbacks import (
     ReduceLROnPlateau,
     EarlyStopping,
@@ -23,6 +23,8 @@ flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
 flags.DEFINE_string('weights', './checkpoints/yolov3.tf',
                     'path to weights file')
 flags.DEFINE_string('classes', './data/coco.names', 'path to classes file')
+flags.DEFINE_string('name', '', 'output file name to save')
+flags.DEFINE_string('gpu', '', 'name of gpu to use')
 flags.DEFINE_enum('mode', 'fit', ['fit', 'eager_fit', 'eager_tf'],
                   'fit: model.fit, '
                   'eager_fit: model.fit(run_eagerly=True), '
@@ -41,11 +43,34 @@ flags.DEFINE_float('learning_rate', 1e-3, 'learning rate')
 flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
 
 
+def get_free_gpu():
+    """Selects the gpu with the most free memory
+    """
+    import subprocess
+    import numpy as np
+
+    output = subprocess.Popen('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free', stdout=subprocess.PIPE,
+                              shell=True).communicate()[0]
+    output = output.decode("ascii")
+    # assumes that it is on the popiah server and the last gpu is not used
+    memory_available = [int(x.split()[2]) for x in output.split("\n")[:-2]]
+    print("Setting GPU to use to PID {}".format(np.argmax(memory_available)))
+    return np.argmax(memory_available)
+
+
+def set_one_gpu():
+
+    gpu = FLAGS.gpu
+    if not gpu:
+        gpu = str(get_free_gpu())
+
+    print("Using GPU: %s" % gpu)
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
+    os.environ['CUDA_VISIBLE_DEVICES'] = gpu
+
+
 def main(_argv):
-    physical_devices = tf.config.experimental.list_physical_devices('GPU')
-    if len(physical_devices) > 0:
-        for dev in physical_devices:
-            tf.config.experimental.set_memory_growth(dev, True)
+    set_one_gpu()
 
     if FLAGS.tiny:
         model = YoloV3Tiny(FLAGS.size, training=True,
@@ -68,6 +93,12 @@ def main(_argv):
         dataset.transform_targets(y, anchors, anchor_masks, 80)))
     train_dataset = train_dataset.prefetch(
         buffer_size=tf.data.experimental.AUTOTUNE)
+
+    tf_name = FLAGS.name
+    if not tf_name:
+        tf_name = 'train' + FLAGS.gpu
+    best_tf_name = "checkpoints/%s_best.tf" % tf_name
+    last_tf_name = "checkpoints/%s_last.tf" % tf_name
 
     val_dataset = dataset.load_fake_dataset()
     if FLAGS.val_dataset:
@@ -162,12 +193,11 @@ def main(_argv):
 
             avg_loss.reset_states()
             avg_val_loss.reset_states()
-            model.save_weights(
-                'checkpoints/yolov3_train_last.tf')
+            model.save_weights(last_tf_name)
             if best_val_loss == 0 or best_val_loss > val_lost:
                 best_val_loss = val_lost
                 logging.info("saving best val loss.")
-                model.save_weights('checkpoints/best.tf')
+                model.save_weights(best_tf_name)
     else:
         model.compile(optimizer=optimizer, loss=loss,
                       run_eagerly=(FLAGS.mode == 'eager_fit'))
@@ -175,7 +205,7 @@ def main(_argv):
         callbacks = [
             ReduceLROnPlateau(verbose=1),
             EarlyStopping(patience=3, verbose=1),
-            ModelCheckpoint('checkpoints/yolov3_train_{epoch}.tf',
+            ModelCheckpoint("checkpoints/%s_best.tf" % tf_name,
                             verbose=1, save_weights_only=True),
             TensorBoard(log_dir='logs')
         ]
@@ -184,6 +214,8 @@ def main(_argv):
                             epochs=FLAGS.epochs,
                             callbacks=callbacks,
                             validation_data=val_dataset)
+
+    print("Best weights are saved as %s" % best_tf_name)
 
 
 if __name__ == '__main__':

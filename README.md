@@ -18,7 +18,7 @@ Using tiny data
    
 Training
 
-    python train.py --batch_size 2 --epochs 55 --transfer darknet --mode eager_tf --classes data/card.names --dataset data/train.record --val_dataset data/val.record --weights ./checkpoints/yolov3-tiny.tf --tiny
+    python train.py --batch_size 2 --epochs 25 --transfer fine_tune --mode eager_tf --classes data/card.names --dataset data/train.record --val_dataset data/val.record --weights ./checkpoints/yolov3-tiny.tf --tiny
 
     python train.py --batch_size 2 --epochs 500 --transfer darknet --mode eager_tf  --classes data/card.names --dataset data/train.record --val_dataset data/val.record 
 
@@ -39,13 +39,14 @@ With tiny of 25 epoch training
 
 All prediction
        
-    python predict.py --classes data/card.names --weights ./checkpoints/d3_tiny_bs2_dn_e25.tf --tiny 
+    python analyze.py --classes data/card.names --weights ./checkpoints/d3_tiny_bs2_tf_e25.tf --tiny
+    python predict.py --classes data/card.names --weights ./checkpoints/d3_tiny_bs2_tf_e25.tf --tiny
     python predict.py --classes data/card.names --weights ./checkpoints/yolov3_train_100.tf --tiny --save
 
 Copy model train 99
 
-    scp mbikyaw@popiah:~/pwork/yolov3-tf2/checkpoints/best* checkpoints/
-    python chchk.py -i best -o d3_tiny_bs2_dn_e25
+    scp mbikyaw@popiah:~/pwork/yolov3-tf2/checkpoints/trian2_best* checkpoints/
+    python chchk.py -i trian2_best -o d3_tiny_bs2_tf_e25
 
 With normal
     
