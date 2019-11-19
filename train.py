@@ -2,7 +2,7 @@ from absl import app, flags, logging
 from absl.flags import FLAGS
 import tensorflow as tf
 import numpy as np
-import os
+import os, shutil
 from tensorflow.keras.callbacks import (
     ReduceLROnPlateau,
     EarlyStopping,
@@ -18,7 +18,6 @@ from yolov3_tf2.utils import freeze_all
 import yolov3_tf2.dataset as dataset
 
 flags.DEFINE_string('dataset', '', 'path to dataset')
-flags.DEFINE_string('val_dataset', '', 'path to validation dataset')
 flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
 flags.DEFINE_string('weights', './checkpoints/yolov3.tf',
                     'path to weights file')
@@ -54,6 +53,8 @@ def get_free_gpu():
     output = output.decode("ascii")
     # assumes that it is on the popiah server and the last gpu is not used
     memory_available = [int(x.split()[2]) for x in output.split("\n")[:-2]]
+    if not memory_available:
+        return
     print("Setting GPU to use to PID {}".format(np.argmax(memory_available)))
     return np.argmax(memory_available)
 
@@ -63,6 +64,9 @@ def set_one_gpu():
     gpu = FLAGS.gpu
     if not gpu:
         gpu = str(get_free_gpu())
+
+    if not gpu:
+        return
 
     print("Using GPU: %s" % gpu)
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
@@ -82,10 +86,12 @@ def main(_argv):
         anchors = yolo_anchors
         anchor_masks = yolo_anchor_masks
 
-    train_dataset = dataset.load_fake_dataset()
-    if FLAGS.dataset:
-        train_dataset = dataset.load_tfrecord_dataset(
-            FLAGS.dataset, FLAGS.classes)
+    # train_dataset = dataset.load_fake_dataset()
+    dataset_name = 'data/' + FLAGS.dataset + '.train.record'
+    val_dataset_name = 'data/' + FLAGS.dataset + '.val.record'
+
+    train_dataset = dataset.load_tfrecord_dataset(
+            dataset_name, FLAGS.classes)
     train_dataset = train_dataset.shuffle(buffer_size=1024)  # TODO: not 1024
     train_dataset = train_dataset.batch(FLAGS.batch_size)
     train_dataset = train_dataset.map(lambda x, y: (
@@ -100,10 +106,9 @@ def main(_argv):
     best_tf_name = "checkpoints/%s_best.tf" % tf_name
     last_tf_name = "checkpoints/%s_last.tf" % tf_name
 
-    val_dataset = dataset.load_fake_dataset()
-    if FLAGS.val_dataset:
-        val_dataset = dataset.load_tfrecord_dataset(
-            FLAGS.val_dataset, FLAGS.classes)
+    # val_dataset = dataset.load_fake_dataset()
+    val_dataset = dataset.load_tfrecord_dataset(
+        val_dataset_name, FLAGS.classes)
     val_dataset = val_dataset.batch(FLAGS.batch_size)
     val_dataset = val_dataset.map(lambda x, y: (
         dataset.transform_images(x, FLAGS.size),
@@ -205,7 +210,7 @@ def main(_argv):
         callbacks = [
             ReduceLROnPlateau(verbose=1),
             EarlyStopping(patience=3, verbose=1),
-            ModelCheckpoint("checkpoints/%s_best.tf" % tf_name,
+            ModelCheckpoint(best_tf_name,
                             verbose=1, save_weights_only=True),
             TensorBoard(log_dir='logs')
         ]
@@ -217,14 +222,23 @@ def main(_argv):
 
     print("Best weights are saved as %s" % best_tf_name)
     tiny = 'tiny_' if FLAGS.tiny else ''
-    rt = os.path.getsize(FLAGS.dataset) / 1000000
-    mn = "%s_r%d%sm%s_bs%d_s%s_e%d_val%d.h5" % \
-         (tf_name, rt, tiny, FLAGS.transfer, FLAGS.batch_size, FLAGS.size, FLAGS.epochs, best_val_loss)
-    mfn = "data/model/%s.h5" % mn
+    out_name = "%s_d%s_%sm%s_bs%d_s%s_e%d_val%d" % \
+         (tf_name, FLAGS.dataset, tiny, FLAGS.transfer, FLAGS.batch_size, FLAGS.size, FLAGS.epochs, best_val_loss)
+    mfn = "data/model/%s.h5" % out_name
 
-    model.save(mfn)
+    final_tf_name = "%s.tf" % out_name
+    copy_tf("%s_best.tf" % tf_name, final_tf_name)
+    print("Final checkpoint file saved as: %s" % final_tf_name)
+    model.save(mfn, save_format='tf')
     print("Model file saved to: %s" % mfn)
 
+
+def copy_tf(ifn, ofn):
+    for fn in os.listdir('checkpoints'):
+        if not fn.startswith(ifn):
+            continue
+        out = fn.replace(ifn, ofn)
+        shutil.copyfile('checkpoints/' + fn, 'checkpoints/' + out)
 
 if __name__ == '__main__':
     try:

@@ -15,7 +15,7 @@ flags.DEFINE_string('weights', './checkpoints/yolov3.tf',
                     'path to weights file')
 flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
 flags.DEFINE_integer('size', 416, 'resize images to')
-flags.DEFINE_boolean('save', False, 'save output file')
+flags.DEFINE_string('save', '', 'all or prediction')
 flags.DEFINE_boolean('all', False, 'run all data')
 flags.DEFINE_string('image', './data/girl.png', 'path to input image')
 flags.DEFINE_string('output', './output.jpg', 'path to output image')
@@ -85,7 +85,7 @@ def main(_argv):
       img = cv2.imread('data/scaled/' + fn)
       img = draw_outputs(img, (boxes, scores, classes, nums), class_names)
       ofn = 'data/predict/' + fn
-      if FLAGS.save or test_data:
+      if FLAGS.save == 'all' or (FLAGS.save == 'test' and test_data):
         cv2.imwrite(ofn, img)
         logging.info('output saved to: {}'.format(ofn))
       for i in range(0, len(xx)):
