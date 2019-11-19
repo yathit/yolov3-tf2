@@ -41,15 +41,15 @@ def main(_argv):
   nfp = 0
   npp = 0
   nxp = 0
-  num_prediction = 0
-  num_correct_predction = 0
+  true_positive = 0
+  false_positive = 0
+  false_negative = 0
 
   for raw in tf.data.TFRecordDataset(['data/test.record', 'data/train.record', 'data/val.record']):
     record = tf.train.Example()
     record.ParseFromString(raw.numpy())
     name = record.features.feature['image/filename'].bytes_list.value[0].decode("utf-8")
     fn = name[name.index('/') + 1:]
-    print("######################### Record", name, "#########################")
 
     lc = fn[len(fn) - 5]
     test_data = lc == '0'
@@ -57,6 +57,7 @@ def main(_argv):
     if not os.path.exists('data/' + name):
       continue
 
+    print("Record", name)
     img = tf.image.decode_image(open('data/' + name, 'rb').read(), channels=3)
     img = tf.expand_dims(img, 0)
     img = transform_images(img, FLAGS.size)
@@ -75,7 +76,8 @@ def main(_argv):
 
     boxes, scores, classes, nums = yolo(img)
 
-    num_prediction += len(xmin)
+    doc = np.zeros(len(xx))
+    retrive = np.zeros(nums[0])
     threshold = 20
 
 
@@ -99,22 +101,33 @@ def main(_argv):
           y = (x1y1[1] + x2y2[1]) / 2
           d = math.sqrt(math.pow((x - xx[i]), 2) + math.pow((y - yy[i]), 2))
           if d < threshold:
-            num_correct_predction += 1
+            doc[i] = 1
+            retrive[j] = 1
             break
 
+    tp = sum(doc)
+    fn = len(doc) - sum(doc)
+    fp = len(retrive) - sum(retrive)
+    true_positive += tp
+    false_positive += fp
+    false_negative += fn
+    print("TP: %d, FP: %d, FN: %d" % (tp, fp, fn))
 
-    logging.info('detections')
-    for i in range(nums[0]):
-      logging.info('\t{}, {}, {}'.format(class_names[int(classes[0][i])],
-                                         np.array(scores[0][i]),
-                                         np.array(boxes[0][i])))
+    if FLAGS.save == 'all':
+      logging.info('detections')
+      for i in range(nums[0]):
+        logging.info('\t{}, {}, {}'.format(class_names[int(classes[0][i])],
+                                           np.array(scores[0][i]),
+                                           np.array(boxes[0][i])))
 
     if nums[0] == 4:
       nxp += 1
 
   print("%d processed. %d some prediction. %d (%1.0f %%) has complete prediction" % (nfp, npp, nxp, 100 * nxp / nfp))
 
-  print("%1.0f %% correctly predicted" % (100 * num_correct_predction / num_prediction))
+  precision = true_positive / (true_positive + false_positive)
+  recall = true_positive / (true_positive + false_negative)
+  print("Precision %1.2f %%, Recall: %1.2f %%" % (100 * precision,  100 * recall))
 
 
 if __name__ == '__main__':
