@@ -1,8 +1,8 @@
-import time
 from absl import app, flags, logging
 from absl.flags import FLAGS
 import cv2, os, math
 import numpy as np
+from tensorflow import keras
 import tensorflow as tf
 from yolov3_tf2.models import (
   YoloV3, YoloV3Tiny
@@ -11,6 +11,7 @@ from yolov3_tf2.dataset import transform_images
 from yolov3_tf2.utils import draw_outputs
 
 flags.DEFINE_string('classes', './data/coco.names', 'path to classes file')
+flags.DEFINE_string('model_name', '', 'H5 model name if weights not given')
 flags.DEFINE_string('weights', './checkpoints/yolov3.tf',
                     'path to weights file')
 flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
@@ -27,13 +28,18 @@ def main(_argv):
   if len(physical_devices) > 0:
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
-  if FLAGS.tiny:
-    yolo = YoloV3Tiny(classes=FLAGS.num_classes)
+  if FLAGS.model_name:
+    logging.info("loading model %s" % FLAGS.model_name)
+    yolo = keras.models.load_model(FLAGS.model_name, custom_objects={'tf': tf}, compile=False)
+    logging.info("model loaded")
   else:
-    yolo = YoloV3(classes=FLAGS.num_classes)
+    if FLAGS.tiny:
+      yolo = YoloV3Tiny(classes=FLAGS.num_classes)
+    else:
+      yolo = YoloV3(classes=FLAGS.num_classes)
+    yolo.load_weights(FLAGS.weights)
+    logging.info('weights loaded')
 
-  yolo.load_weights(FLAGS.weights)
-  logging.info('weights loaded')
 
   class_names = [c.strip() for c in open(FLAGS.classes).readlines()]
   logging.info('classes loaded')

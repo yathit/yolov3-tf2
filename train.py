@@ -220,6 +220,11 @@ def main(_argv):
                             callbacks=callbacks,
                             validation_data=val_dataset)
 
+    if history is not None:
+        print(history.history['val_loss'])
+        best_val_loss = min(history.history['val_loss'])
+        model.save_weights(best_tf_name)
+
     print("Best weights are saved as %s" % best_tf_name)
     tiny = 'tiny_' if FLAGS.tiny else ''
     out_name = "%s_d%s_%sm%s_bs%d_s%s_e%d_val%d" % \
