@@ -5,12 +5,13 @@ import numpy as np
 from tensorflow import keras
 import tensorflow as tf
 from yolov3_tf2.models import (
-  YoloV3, YoloV3Tiny
+  YoloV3, YoloV3Tiny, transformOutputTiny, transformOutput
 )
 from yolov3_tf2.dataset import transform_images
 from yolov3_tf2.utils import draw_outputs
 
 flags.DEFINE_string('classes', './data/coco.names', 'path to classes file')
+flags.DEFINE_string('dataset', 'w20', 'dataset name')
 flags.DEFINE_string('model_name', '', 'H5 model name if weights not given')
 flags.DEFINE_string('weights', './checkpoints/yolov3.tf',
                     'path to weights file')
@@ -30,7 +31,7 @@ def main(_argv):
 
   if FLAGS.model_name:
     logging.info("loading model %s" % FLAGS.model_name)
-    yolo = keras.models.load_model(FLAGS.model_name, custom_objects={'tf': tf}, compile=False)
+    yolo = tf.saved_model.load(FLAGS.model_name)
     logging.info("model loaded")
   else:
     if FLAGS.tiny:
@@ -51,14 +52,19 @@ def main(_argv):
   false_positive = 0
   false_negative = 0
 
-  for raw in tf.data.TFRecordDataset(['data/test.record', 'data/train.record', 'data/val.record']):
+  ds = FLAGS.dataset
+  if FLAGS.save == 'all':
+    records = ["data/%s.test.record" % ds,
+     "data/%s.train.record" % ds,
+     "data/%s.val.record" % ds]
+  else:
+    records = ["data/%s.test.record" % ds]
+
+  for raw in tf.data.TFRecordDataset(records):
     record = tf.train.Example()
     record.ParseFromString(raw.numpy())
     name = record.features.feature['image/filename'].bytes_list.value[0].decode("utf-8")
     fn = name[name.index('/') + 1:]
-
-    lc = fn[len(fn) - 5]
-    test_data = lc == '0'
 
     if not os.path.exists('data/' + name):
       continue
@@ -79,8 +85,14 @@ def main(_argv):
       xx.append(wh[0] * (xmin[i] + xmax[i]) / 2)
       yy.append(wh[1] * (ymin[i] + ymax[i]) / 2)
 
-
-    boxes, scores, classes, nums = yolo(img)
+    if FLAGS.model_name:
+      out = yolo(img)
+      if FLAGS.tiny:
+        boxes, scores, classes, nums = transformOutputTiny(out[0], out[1])
+      else:
+        boxes, scores, classes, nums = transformOutput(out[0], out[1])
+    else:
+      boxes, scores, classes, nums = yolo(img)
 
     doc = np.zeros(len(xx))
     retrive = np.zeros(nums[0])
@@ -90,10 +102,10 @@ def main(_argv):
     nfp += 1
     if nums[0] > 0:
       npp += 1
-      img = cv2.imread('data/scaled/' + fn)
+      img = cv2.imread('data/' + name)
       img = draw_outputs(img, (boxes, scores, classes, nums), class_names)
       ofn = 'data/predict/' + fn
-      if FLAGS.save == 'all' or (FLAGS.save == 'test' and test_data):
+      if FLAGS.save == 'all' or FLAGS.save == 'test':
         cv2.imwrite(ofn, img)
         logging.info('output saved to: {}'.format(ofn))
       for i in range(0, len(xx)):

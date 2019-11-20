@@ -151,6 +151,7 @@ def main(_argv):
     loss = [YoloLoss(anchors[mask], classes=FLAGS.num_classes)
             for mask in anchor_masks]
     best_val_loss = 0
+    history = None
 
     if FLAGS.mode == 'eager_tf':
         # Eager mode is great for debugging
@@ -201,7 +202,7 @@ def main(_argv):
             model.save_weights(last_tf_name)
             if best_val_loss == 0 or best_val_loss > val_lost:
                 best_val_loss = val_lost
-                logging.info("saving best val loss.")
+                logging.info("saving best val loss: %s" % best_tf_name)
                 model.save_weights(best_tf_name)
     else:
         model.compile(optimizer=optimizer, loss=loss,
@@ -229,12 +230,13 @@ def main(_argv):
     tiny = 'tiny_' if FLAGS.tiny else ''
     out_name = "%s_d%s_%sm%s_bs%d_s%s_e%d_val%d" % \
          (tf_name, FLAGS.dataset, tiny, FLAGS.transfer, FLAGS.batch_size, FLAGS.size, FLAGS.epochs, best_val_loss)
-    mfn = "data/model/%s.h5" % out_name
+    mfn = "data/model/%s/" % out_name
 
     final_tf_name = "%s.tf" % out_name
     copy_tf("%s_best.tf" % tf_name, final_tf_name)
     print("Final checkpoint file saved as: %s" % final_tf_name)
-    model.save(mfn, save_format='tf')
+    model.load_weights(best_tf_name)
+    tf.saved_model.save(model, mfn)
     print("Model file saved to: %s" % mfn)
 
 

@@ -230,6 +230,16 @@ def YoloV3(size=None, channels=3, anchors=yolo_anchors,
     return Model(inputs, outputs, name='yolov3')
 
 
+def transformOutput(output_0, output_1):
+    anchors = yolo_anchors
+    masks = yolo_anchor_masks
+    classes = 80
+    boxes_0 = yolo_boxes(output_0, anchors[masks[0]], classes)
+    boxes_1 = yolo_boxes(output_1, anchors[masks[1]], classes)
+    boxes_2 = yolo_boxes(output_1, anchors[masks[2]], classes)
+    return yolo_nms((boxes_0[:3], boxes_1[:3], boxes_2[:3]), anchors, masks, classes)
+
+
 def YoloV3Tiny(size=None, channels=3, anchors=yolo_tiny_anchors,
                masks=yolo_tiny_anchor_masks, classes=80, training=False):
     x = inputs = Input([size, size, channels])
@@ -252,6 +262,15 @@ def YoloV3Tiny(size=None, channels=3, anchors=yolo_tiny_anchors,
     outputs = Lambda(lambda x: yolo_nms(x, anchors, masks, classes),
                      name='yolo_nms')((boxes_0[:3], boxes_1[:3]))
     return Model(inputs, outputs, name='yolov3_tiny')
+
+
+def transformOutputTiny(output_0, output_1):
+    anchors = yolo_tiny_anchors
+    masks = yolo_tiny_anchor_masks
+    classes = 80
+    boxes_0 = yolo_boxes(output_0, anchors[masks[0]], classes)
+    boxes_1 = yolo_boxes(output_1, anchors[masks[1]], classes)
+    return yolo_nms((boxes_0[:3], boxes_1[:3]), anchors, masks, classes)
 
 
 def YoloLoss(anchors, classes=80, ignore_thresh=0.5):
